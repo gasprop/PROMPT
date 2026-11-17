@@ -1,0 +1,16 @@
+# local toolchain / generated artifacts
+.venv/
+project/node_modules/
+project/web/bundle.js
+project/web/lib/stubs/*.c
+project/web/lib/stubs/*.map
+project/work/
+project/stills/
+project/out/
+project/dbg.mjs
+project/test_webgl.mjs
+*.log
+
+.secrets/
+__pycache__/
+*.pyc
