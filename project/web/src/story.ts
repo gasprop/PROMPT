@@ -34,14 +34,15 @@ const mix = (a: V3, b: V3, k: number): V3 => [a[0] + (b[0] - a[0]) * k, a[1] + (
 /** camera pose for frame f: cam -> move over the shot, plus a 1.5 % micro-creep so no hold is ever static */
 export const camAt = (f: number): { pos: V3; look: V3; fov: number; roll: number } => {
   const c = cueAt(f);
-  const u = smooth((f - c.a) / Math.max(1, c.b - c.a));
+  const uLin = (f - c.a) / Math.max(1, c.b - c.a);
+  const u = 0.2 * uLin + 0.8 * smooth(uLin);
   const pos = mix(c.cam.pos, c.move.pos ?? c.cam.pos, u);
   const look = mix(c.cam.look, c.move.look ?? c.cam.look, u);
   const fov = c.cam.fov + ((c.move.fov ?? c.cam.fov) - c.cam.fov) * u;
   const roll = (c.cam.roll ?? 0) + ((c.move.roll ?? c.cam.roll ?? 0) - (c.cam.roll ?? 0)) * u;
   const dx = look[0] - pos[0], dy = look[1] - pos[1], dz = look[2] - pos[2];
   const d = Math.hypot(dx, dy, dz) || 1;
-  const k = 0.015 * u;
+  const k = 0.02 * uLin;
   return { pos: [pos[0] + (dx / d) * d * k, pos[1] + (dy / d) * d * k, pos[2] + (dz / d) * d * k], look, fov, roll };
 };
 

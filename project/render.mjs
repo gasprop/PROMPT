@@ -15,15 +15,15 @@ const parseFrames = (s) => {
 };
 const frames = parseFrames(framesArg);
 
-chromium.setGraphicsMode = true;
-// stub NSS/NSPR libraries (built by make_stubs.py) so the serverless Chromium can load here
+const isMac = process.platform === 'darwin';
+if (!isMac) chromium.setGraphicsMode = true;
 const stubs = path.resolve(new URL('.', import.meta.url).pathname, 'web/lib/stubs');
-const env = { ...process.env, LD_LIBRARY_PATH: stubs + (process.env.LD_LIBRARY_PATH ? ':' + process.env.LD_LIBRARY_PATH : '') };
+const env = isMac ? process.env : { ...process.env, LD_LIBRARY_PATH: stubs + (process.env.LD_LIBRARY_PATH ? ':' + process.env.LD_LIBRARY_PATH : '') };
 const browser = await puppeteer.launch({
-  args: [...chromium.args, '--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader'],
-  executablePath: await chromium.executablePath(),
+  args: isMac ? ['--no-sandbox', '--disable-setuid-sandbox', '--headless=new'] : [...chromium.args, '--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader'],
+  executablePath: isMac ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : await chromium.executablePath(),
   env,
-  headless: 'shell',
+  headless: isMac ? 'new' : 'shell',
   defaultViewport: { width: W, height: H, deviceScaleFactor: 1 },
 });
 const page = await browser.newPage();

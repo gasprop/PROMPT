@@ -3,10 +3,11 @@
 Usage: python3 finish.py [out.mp4] [--frames DIR] [--audio FILE] [--res WxH]
 Rules: 1080x1920, 30 fps, H.264 High + AAC 192k, yuv420p, faststart.
 """
-import pathlib, subprocess, sys, json
+import pathlib, subprocess, sys, json, shutil
 import numpy as np
 
-FFMPEG = "/home/user/PROMPT/.venv/lib/python3.11/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v9.0.2"
+_FFMPEG_DEFAULT = "/home/user/PROMPT/.venv/lib/python3.11/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v9.0.2"
+FFMPEG = _FFMPEG_DEFAULT if pathlib.Path(_FFMPEG_DEFAULT).exists() else (shutil.which("ffmpeg") or "ffmpeg")
 ROOT = pathlib.Path(__file__).resolve().parent
 FPS = 30
 

@@ -91,8 +91,8 @@ const mipSetSize = mip.setSize.bind(mip);
 mip.setSize = (w, h) => mipSetSize(Math.round((1920 * w) / Math.max(h, 1)), 1920);
 const tone = new ToneMappingEffect({ mode: ToneMappingMode.NEUTRAL });
 const grade = new GradeEffect(GRADES.day, GRADE_STRENGTH.day);
-const grain = new GrainEffect({ amount: 0.02, cellPx: 1.5 });
-composer.addPass(new EffectPass(camera, bloom, tone, grade));
+const grain = new GrainEffect({ amount: 0.025, cellPx: 1.5 });
+composer.addPass(new EffectPass(camera, bloom, tone, grade, grain));
 
 const flashEl = document.getElementById("flash");
 

@@ -4,16 +4,22 @@ Reads the API key from $ELEVEN_API_KEY or .secrets/elevenlabs.key (gitignored).
 Usage: python3 eleven.py [--voice VOICE_ID] [--out DIR]
 Writes <out>/voice.mp3 and <out>/phrases.json (sentence frame ranges at 30 fps).
 """
-import base64, json, os, re, sys, urllib.request, pathlib
+import base64, json, os, re, sys, urllib.request, pathlib, ssl
+
+try:
+    import certifi
+    SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except Exception:
+    SSL_CTX = ssl._create_unverified_context()
 
 ROOT = pathlib.Path(__file__).resolve().parent
 FPS = 30
 MODEL = "eleven_v4"
-# a steady, warm narrator; override with --voice or $ELEVEN_VOICE_ID
-DEFAULT_VOICE = "21m00Tcm4TlvDq8ikWAM"
+# a steady, warm narrator; override with --voice or $ELEVEN_VOICE_ID / $ELEVENLABS_VOICE_ID
+DEFAULT_VOICE = "JBFqnCBsd6RMkjVDRZzb"
 
 def load_key():
-    k = os.environ.get("ELEVEN_API_KEY", "").strip()
+    k = os.environ.get("ELEVEN_API_KEY", "").strip() or os.environ.get("ELEVENLABS_API_KEY", "").strip()
     if k:
         return k
     f = ROOT / ".secrets" / "elevenlabs.key"
@@ -57,7 +63,7 @@ def main():
         "xi-api-key": load_key(), "Content-Type": "application/json", "Accept": "application/json",
     })
     print("calling ElevenLabs v4 ...")
-    with urllib.request.urlopen(req, timeout=180) as r:
+    with urllib.request.urlopen(req, timeout=180, context=SSL_CTX) as r:
         ctype = r.headers.get("Content-Type", "")
         raw = r.read()
     if "json" in ctype:
@@ -73,8 +79,8 @@ def main():
         print("no alignment returned; run timing.py separately")
         return
     chars = align.get("characters", [])
-    t0 = align.get("char_start_times_seconds", [])
-    t1 = align.get("char_end_times_seconds", [])
+    t0 = align.get("character_start_times_seconds") or align.get("char_start_times_seconds", [])
+    t1 = align.get("character_end_times_seconds") or align.get("char_end_times_seconds", [])
     # word spans in the plain text
     words = [(m.start(), m.end(), m.group(0)) for m in re.finditer(r"\S+", plain)]
     phrases, cur, cur_start = [], [], None
@@ -84,16 +90,16 @@ def main():
         if not ts:
             continue
         a, b = min(ts), max(te)
-        cur.append({"w": w, "a": a, "b": b})
+        cur.append({"w": w, "a": a, "b": b, "fa": round(a * FPS), "fb": round(b * FPS)})
         if cur_start is None:
             cur_start = a
         if w.rstrip().endswith((".", "!", "?")):
             phrases.append({"text": " ".join(x["w"] for x in cur), "a": cur_start, "b": b,
-                            "fa": round(cur_start * FPS), "fb": round(b * FPS)})
+                            "fa": round(cur_start * FPS), "fb": round(b * FPS), "words": list(cur)})
             cur, cur_start = [], None
     if cur:
         phrases.append({"text": " ".join(x["w"] for x in cur), "a": cur_start, "b": cur[-1]["b"],
-                        "fa": round(cur_start * FPS), "fb": round(cur[-1]["b"] * FPS)})
+                        "fa": round(cur_start * FPS), "fb": round(cur[-1]["b"] * FPS), "words": list(cur)})
     total = round((phrases[-1]["b"] if phrases else 0) * FPS)
     (out / "phrases.json").write_text(json.dumps({"fps": FPS, "total": total, "phrases": phrases}, indent=1))
     print("wrote", out / "phrases.json", "| sentences:", len(phrases), "| total frames:", total)

@@ -13,13 +13,14 @@ const count = parseInt(process.argv[3] || '1800', 10);
 const TOTAL = JSON.parse(fs.readFileSync(path.resolve('work/cues.json'), 'utf8')).total;
 fs.mkdirSync(OUT, { recursive: true });
 
-chromium.setGraphicsMode = true;
+const isMac = process.platform === 'darwin';
+if (!isMac) chromium.setGraphicsMode = true;
 const stubs = path.resolve('web/lib/stubs');
-const env = { ...process.env, LD_LIBRARY_PATH: stubs + (process.env.LD_LIBRARY_PATH ? ':' + process.env.LD_LIBRARY_PATH : '') };
+const env = isMac ? process.env : { ...process.env, LD_LIBRARY_PATH: stubs + (process.env.LD_LIBRARY_PATH ? ':' + process.env.LD_LIBRARY_PATH : '') };
 const browser = await puppeteer.launch({
-  args: [...chromium.args, '--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader'],
-  executablePath: await chromium.executablePath(),
-  env, headless: 'shell',
+  args: isMac ? ['--no-sandbox', '--disable-setuid-sandbox', '--headless=new'] : [...chromium.args, '--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader'],
+  executablePath: isMac ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : await chromium.executablePath(),
+  env, headless: isMac ? 'new' : 'shell',
   defaultViewport: { width: W, height: H, deviceScaleFactor: 1 },
 });
 const page = await browser.newPage();

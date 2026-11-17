@@ -239,10 +239,33 @@ def build():
             c["flash"] = sd["beat"] in FLASH
             c["az"] = AZ.get(sd["beat"], 180)
             cues.append(c)
+    # fix any overlaps
+    for i in range(len(cues) - 1):
+        if cues[i]["b"] >= cues[i + 1]["a"]:
+            cues[i]["b"] = cues[i + 1]["a"] - 1
+
+    # bridge gaps between shots so every frame belongs to a shot (no frozen spans)
+    if cues:
+        cues[0]["a"] = 0
+    for i in range(len(cues) - 1):
+        gap = cues[i + 1]["a"] - cues[i]["b"] - 1
+        if gap > 0:
+            l1 = cues[i]["b"] - cues[i]["a"] + 1
+            l2 = cues[i + 1]["b"] - cues[i + 1]["a"] + 1
+            room1 = max(0, MAXF - l1)
+            room2 = max(0, MAXF - l2)
+            add1 = min(gap, room1)
+            if gap - add1 > room2:
+                add1 = max(0, gap - room2)
+            add2 = gap - add1
+            cues[i]["b"] += add1
+            cues[i + 1]["a"] -= add2
+
     # the last shot may absorb the tail (a beat of silence under the final image) as long as it stays <= MAXF
-    if cues and cues[-1]["b"] + 1 < TOTAL:
+    audio_total = data.get("total", TOTAL)
+    if cues and cues[-1]["b"] + 1 < audio_total:
         room = MAXF - (cues[-1]["b"] - cues[-1]["a"] + 1)
-        cues[-1]["b"] = min(TOTAL - 1, cues[-1]["b"] + max(0, room))
+        cues[-1]["b"] = min(audio_total - 1, cues[-1]["b"] + max(0, room))
     total = cues[-1]["b"] + 1
     out = dict(fps=FPS, total=total, target=TOTAL, real_audio=real, shots=cues)
     (ROOT / "work" / "cues.json").write_text(json.dumps(out, indent=1))

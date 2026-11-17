@@ -5,13 +5,14 @@ Rules (MASTER-PROMPT step 14):
   * SFX peaks are capped at 0.7 x the voice peak
 Usage: python3 mix.py [voice.mp3] [music.wav] [sfx.wav]
 """
-import json, pathlib, subprocess, sys
+import json, pathlib, subprocess, sys, shutil
 import numpy as np
 
 SR = 48000
 ROOT = pathlib.Path(__file__).resolve().parent
 WORK = ROOT / "work"
-FFMPEG = "/home/user/PROMPT/.venv/lib/python3.11/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v9.0.2"
+_FFMPEG_DEFAULT = "/home/user/PROMPT/.venv/lib/python3.11/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v9.0.2"
+FFMPEG = _FFMPEG_DEFAULT if pathlib.Path(_FFMPEG_DEFAULT).exists() else (shutil.which("ffmpeg") or "ffmpeg")
 
 def decode(path, dur=None):
     cmd = [FFMPEG, "-y", "-v", "error", "-i", str(path), "-vn", "-ac", "1", "-ar", str(SR), "-f", "f32le", "pipe:1"]
@@ -37,8 +38,8 @@ def gated_rms(x, thr_db=-45):
 
 def main():
     voice_p = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else WORK / "voice.mp3"
-    music_p = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else WORK / "music.wav"
-    sfx_p = pathlib.Path(sys.argv[3]) if len(sys.argv) > 3 else WORK / "sfx.wav"
+    music_p = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else (WORK / "music.npy" if (WORK / "music.npy").exists() else WORK / "music.wav")
+    sfx_p = pathlib.Path(sys.argv[3]) if len(sys.argv) > 3 else (WORK / "sfx.npy" if (WORK / "sfx.npy").exists() else WORK / "sfx.wav")
     for p in (voice_p, music_p, sfx_p):
         if not p.exists():
             sys.exit(f"missing {p}")
