@@ -55,12 +55,30 @@ voiceover + music + SFX.
 
 `api.elevenlabs.io` was unreachable from the original sandbox (DNS+TCP OK, **TLS reset**,
 `curl` returns `000`). The ElevenLabs key is at `project/.secrets/elevenlabs.key`
-(gitignored — **never print it, never commit it**). If your environment also cannot reach it,
-ask the user to run step 1a locally and drop the two files into `project/work/`.
+(gitignored — **never print it, never commit it**).
 
 ```bash
-cd project && python3 eleven.py
+cd project
+python3 eleven.py --probe          # HTTP 200 = key fine; prints plan + credits left
+python3 eleven.py                  # writes work/voice.mp3 + work/phrases.json
 ```
+
+**FREE-PLAN GOTCHAS (this is the #1 failure, and it is not a code bug):**
+- The key is on the **Free** plan. The API **only accepts PREMADE voices**. A "library" voice
+  returns `HTTP 402 paid_plan_required` even though it appears in `GET /v1/voices`.
+  `eleven.py` now defaults to a premade voice — **Brian** `nPczCjzI2devNBz1zQrb`
+  (deep/resonant, right for this story). Alternatives in the `PREMADE` dict at the top of
+  `eleven.py`: George `JBFqnCBsd6RMkjVDRZzb` (warm British storyteller), Roger
+  `CwhRBWXzGAHq8TQ4Fs17`, Sarah `EXAVITQu4vr4xnSDxMaL`, Jessica `cgSgspJ2msm6clMCkdW9`,
+  Adam `pNInz6obpgDQGcFmaJgB`.
+  ⚠️ The old default `21m00Tcm4TlvDq8ikWAM` (Rachel) is a **library** voice → 402. Do not use it.
+- `model_id=eleven_v4` **does** work on the free plan. No SSML. Bracket tags are free text.
+- Stack 2–3 cues per tag and describe the *voice*, not the feeling: `[angry]` is nearly inert,
+  `[furious, shouting, throaty]` is not. Tags are not spoken aloud.
+- Credits: ~1 credit/character; the script is **1497 chars ≈ 1497 credits per take**. Do not
+  loop takes. Serialise requests — free-tier concurrency is low (429).
+- If `with-timestamps` returns no alignment, `eleven.py` falls back to measuring the real audio
+  length and spreading sentences proportionally — still writes a usable `phrases.json`.
 
 `eleven.py` calls ElevenLabs **v4** (`model_id=eleven_v4`, voice `21m00Tcm4TlvDq8ikWAM`,
 `/with-timestamps`) with the bracket-tagged read in `work/script_tagged.txt` (v4 emotion/
